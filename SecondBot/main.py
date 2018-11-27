@@ -2,42 +2,54 @@ from flask import Flask, request
 from flask_sslify import SSLify
 
 from telebot import types
-
-import requests
 import telebot
 import misc
-import json
+from parsing import get_price
 import re
 
 
 app = Flask(__name__)
 sslify = SSLify(app)
 
+bot = telebot.TeleBot(misc.token, threaded=False)
 pattern = r'/\w+'
 
-bot = telebot.TeleBot(misc.token, threaded=False)
 
-def parse_text(text):
-    crypto = re.search(pattern, text).group()
-    return crypto[1:]
-    
-def get_price(crypto):
-    crypto = crypto.upper()
-    url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol={}'.format(crypto)
-    try:
-        r = requests.get(url, headers=misc.headers).json()
-        price = r['data'][crypto]['quote']['USD']['price']
-        return 'Курс ' + crypto + ' = ' + str(price) + ' $'
-    except:
-        return "Такой криптовалюты нет. Введите символ криптовалюты"
+def log(message, answer):
+    print('\n -----')
+    from datetime import datetime
+    print(datetime.now())
+    print('Сообщение от {0} {1}. (id = {2}) \n Текст = {3}'.format(message.from_user.first_name,
+                                                                    message.from_user.last_name,
+                                                                    str(message.from_user.id),
+                                                                    message.text))
+
+# Клавиатура
+@bot.message_handler(commands=["start"])
+def heandle_start(message):
+    user_markup = telebot.types.ReplyKeyboardMarkup(True)
+    user_markup.row('/btc', '/eth', '/xrp', '/bch', '/eos')
+    user_markup.row('/xlm', '/ltc', '/usdt', '/ada', '/xmr', '/trx')
+    bot.send_message(message.from_user.id, 'Добро пожаловать...', reply_markup=user_markup)
+
+
+@bot.message_handler(commands=["help"])
+def help_messages(message):
+    answer = "Я помогаю узнать курсы криптовалют. Введите символ интересующей крипты"
+    bot.send_message(message.chat.id, answer)
+    log(message, answer)                                                                    
+
 
 @bot.message_handler(content_types=["text"])
-def price_messages(message): # Название функции не играет никакой роли, в принципе
+def price_messages(message):
     if (re.search(pattern, message.text) and message.text != "/help" and message.text != '/start'):
-        msg = get_price(parse_text(message.text))
-        bot.send_message(message.chat.id, msg)
+        answer = get_price(message.text)
+        bot.send_message(message.chat.id, answer)
+        log(message, answer)
     else:
-        bot.send_message(message.chat.id, 'Введите символ криптовалюты')
+        answer = 'Введите символ криптовалюты'
+        bot.send_message(message.chat.id, answer)
+        log(message, answer)
 
 @app.route('/', methods=["POST"])
 def index():
@@ -46,3 +58,5 @@ def index():
 
 if __name__ == '__main__':
     app.run()
+    # bot.remove_webhook()
+    # bot.polling(none_stop=True, interval=0)
