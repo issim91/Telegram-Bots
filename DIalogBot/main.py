@@ -24,6 +24,7 @@ btn_in_sat = telebot.types.InlineKeyboardButton('Суббота', callback_data=
 btn_in_sun = telebot.types.InlineKeyboardButton('Воскресенье', callback_data='Sunday')
 markup_day.add(btn_in_mon, btn_in_tues, btn_in_wed, btn_in_th, btn_in_fri, btn_in_sat, btn_in_sun)
 
+# Обработка команды /help
 @bot.message_handler(commands=['help'])
 def process_help_command(message):
     bot.send_message(message.chat.id, config.help_message)
